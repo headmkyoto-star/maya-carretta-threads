@@ -186,9 +186,29 @@ def post_to_threads(text, media_url=None, media_type=None):
         params={"creation_id": cid, "access_token": ACCESS_TOKEN}
     )
 
+def is_rest_day_jp():
+    """土日または日本の祝日ならTrue（JST基準）"""
+    import datetime
+    today = (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).date()
+    if today.weekday() >= 5:
+        print(f"😴 {today} は土日なので投稿お休み")
+        return True
+    try:
+        r = requests.get("https://holidays-jp.github.io/api/v1/date.json", timeout=10)
+        holidays = r.json()
+        if today.isoformat() in holidays:
+            print(f"🎌 {today} は祝日（{holidays[today.isoformat()]}）なので投稿お休み")
+            return True
+    except Exception as e:
+        print(f"⚠️ 祝日API取得失敗（投稿は続行）: {e}")
+    return False
+
 if not ACCESS_TOKEN or not USER_ID:
     print("⚠️ Secrets未設定")
     exit(1)
+
+if is_rest_day_jp():
+    exit(0)
 
 text = generate_post()
 print(f"📝 投稿文 ({len(text)}文字):\n{text}\n")
