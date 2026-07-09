@@ -82,7 +82,10 @@ def get_media():
 def generate_post():
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     opening = random.choice(OPENING_PHRASES)
-    menu = random.choice(MENUS)
+    # メニューは日替わりローテーション（連続で同じメニューにならない）
+    import datetime as _dt
+    _jst_today = (_dt.datetime.utcnow() + _dt.timedelta(hours=9)).date()
+    menu = MENUS[_jst_today.toordinal() % len(MENUS)]
 
     prompt = f"""京都河原町のリラクゼーションサロン「まやカーレッタ」の若い女性セラピストとして、Threadsの短い営業投稿を作成してください。
 
