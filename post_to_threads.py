@@ -61,6 +61,30 @@ MENUS = [
     "もみほぐし",
 ]
 
+_MENU_STATE_PATH = "state/last_menu.json"
+
+def pick_menu():
+    """曜日に関係なくランダム。直前と同じメニューにはならない。"""
+    last = None
+    if _os_dedup.path.exists(_MENU_STATE_PATH):
+        try:
+            last = _json_dedup.loads(open(_MENU_STATE_PATH).read()).get("menu")
+        except Exception:
+            last = None
+    candidates = [m for m in MENUS if m != last] or MENUS[:]
+    chosen = random.choice(candidates)
+    try:
+        _os_dedup.makedirs(_os_dedup.path.dirname(_MENU_STATE_PATH), exist_ok=True)
+        with open(_MENU_STATE_PATH, "w") as f:
+            _json_dedup.dump(
+                {"menu": chosen, "date": _dt_dedup.date.today().isoformat()},
+                f, ensure_ascii=False, indent=2
+            )
+    except Exception as e:
+        print(f"⚠️ メニュー履歴の保存失敗（投稿は続行）: {e}")
+    print(f"[menu] 選択: {chosen} (前回: {last})")
+    return chosen
+
 def get_media():
     """動画のみ選択（画像は使わない）"""
     videos = []
@@ -83,10 +107,8 @@ def get_media():
 def generate_post():
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     opening = random.choice(OPENING_PHRASES)
-    # メニューは日替わりローテーション（連続で同じメニューにならない）
-    import datetime as _dt
-    _jst_today = (_dt.datetime.utcnow() + _dt.timedelta(hours=9)).date()
-    menu = MENUS[_jst_today.toordinal() % len(MENUS)]
+    # メニューはシャッフル（曜日固定なし・直前と同じにはならない）
+    menu = pick_menu()
 
     prompt = f"""京都祇園のリラクゼーションサロン「まやカーレッタ」の若い女性セラピストとして、Threadsの短い営業投稿を作成してください。
 
